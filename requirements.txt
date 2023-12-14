@@ -1,0 +1,9 @@
+hyperopt
+ipykernel
+matplotlib
+numpy
+pandas
+pyodbc
+python-dotenv
+scikit-learn
+sqlalchemy
