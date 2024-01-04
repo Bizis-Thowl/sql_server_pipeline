@@ -4,7 +4,7 @@
 
 in order to properly store the credentials to the database, you have to create a `.env` file with the following fields and your configuration:
 
-```
+```conf
 SQL_SERVER_IP = "localhost"
 SQL_SERVER_PORT = "1456"
 DB = "metmast"
@@ -13,25 +13,32 @@ DB_PW = "password"
 DB_DRIVER = "ODBC+Driver+18+for+SQL+Server"
 ```
 
-## Database Setup with docker
+on linux the driver will be `/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.3.so.2.1` or equivalent.
+alternatively you can search for it with `find / -type f -iname "libmsodbcsql*" 2>/dev/null`
 
-It is possible to use your local database. Though, the easiest and fastest way to get started is, to setup a docker instance. Simply follow the steps below.
+## database Setup with docker
+
+it is possible to use your local database. Though, the easiest and fastest way to get started is, to setup a docker instance. Simply follow the steps below.
 
 ## initialize and run mssql docker from dockerhub
-```
+
+```sh
 sudo docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=$password" -p 1456:1433 -d mcr.microsoft.com/mssql/server:2022-latest
 ```
-Or look for an image of choice at https://hub.docker.com/_/microsoft-mssql-server
+
+or look for an image of choice at <https://hub.docker.com/_/microsoft-mssql-server>
 
 ## connect to database from client and configure database
+
 connect to db:
-```
-sqlcmd -S $ip_address,1456 -U sa -P "$password"
+
+```sh
+sqlcmd -S $ip_address,1456 -C -U sa -P "$password"
 ```
 
 set most basic configuration:
 
-```
+```sql
 CREATE DATABASE metmast;
 GO
 CREATE LOGIN metmast_user WITH PASSWORD = '$db_password';
@@ -42,3 +49,25 @@ GO
 ALTER ROLE db_owner ADD MEMBER metmast_user;
 GO
 ```
+
+## extracting data
+
+```sh
+unzip data.zip
+```
+
+## installing dependencies
+
+```sh
+# optional: create and use a venv
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+## order to run the notebooks in
+
+1. `SQL_Setp_custom1`
+1. `CreateTables`
+1. `LoadDataSet`
