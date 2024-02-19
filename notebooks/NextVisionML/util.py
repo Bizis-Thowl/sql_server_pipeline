@@ -1,10 +1,19 @@
 import pandas as pd
+import os
+from urllib.parse import quote
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
 def get_engine():
-    SERVER = 'localhost'
-    DATABASE = 'metmast_0_4'
-    engine = create_engine(f'mssql+pyodbc:///?odbc_connect=DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={SERVER};DATABASE={DATABASE};Trusted_Connection=yes;TrustServerCertificate=yes;')
+    load_dotenv()
+    SERVER = os.getenv("SQL_SERVER_IP")
+    PORT= os.getenv("SQL_SERVER_PORT")
+    DATABASE = os.getenv("DB")
+    USER = os.getenv("DB_USER")
+    PASSWORD = os.getenv("DB_PW")
+    DRIVER = os.getenv("DB_DRIVER")
+    engine = create_engine(
+        f"mssql+pyodbc://{USER}:{PASSWORD}@{SERVER}:{PORT}/{DATABASE}?driver={DRIVER}&TrustServerCertificate=yes")
     return engine
 
 def create_object(context, table_name, with_commit=False, **kwargs):

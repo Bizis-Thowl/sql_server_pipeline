@@ -81,16 +81,17 @@ def load_context():
         .join(label, label.c.id == datapoint_rul_label.c.label_id)
     )
     
-    df_train = pd.read_sql_query(query_train, engine)
-    df_test = pd.read_sql_query(query_test, engine)
+    con = engine.connect()
+    df_train = pd.read_sql_query(query_train, con)
+    df_test = pd.read_sql_query(query_test, con)
 
     # Pivot tables to get features as columns, for both train and test
     train = df_train.pivot_table(index='datapoint_id', columns='feature_name', values='feature_value').reset_index()
     test = df_test.pivot_table(index='datapoint_id', columns='feature_name', values='feature_value').reset_index()
     
     # Execute the queries and load into DataFrames
-    df_cat_labels = pd.read_sql_query(query_cat_labels, engine)
-    df_cont_labels = pd.read_sql_query(query_cont_labels, engine)
+    df_cat_labels = pd.read_sql_query(query_cat_labels, con)
+    df_cont_labels = pd.read_sql_query(query_cont_labels, con)
 
     # Pivot table for categorical labels
     pivot_cat_labels = df_cat_labels.pivot_table(
