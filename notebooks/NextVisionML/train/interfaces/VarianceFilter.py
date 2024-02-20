@@ -1,10 +1,10 @@
-from ..TrainInterationInterface import TrainInterationInterface
+from ..TrainInterationInterface import TrainPreperationInterface
 from hyperopt import hp
 from sklearn.feature_selection import VarianceThreshold
 from ...util import create_object, get_feature_id_by_name, get_next_ID_for_Table
 import numpy as np
 
-class VarianceFilter(TrainInterationInterface):
+class VarianceFilter(TrainPreperationInterface):
     def __init__(self, mlContext):
         super().__init__(mlContext)
         

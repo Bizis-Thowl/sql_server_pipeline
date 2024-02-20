@@ -1,4 +1,4 @@
-class TrainPreperationInterface:
+class TrainInterface:
     def __init__(self, mlContext):
         self.mlContext = mlContext
         
@@ -6,4 +6,7 @@ class TrainPreperationInterface:
         pass
     
     def populate(self, i):
+        pass
+    
+    def upload(self, i):
         pass

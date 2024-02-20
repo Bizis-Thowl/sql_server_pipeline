@@ -5,9 +5,9 @@ from ..util import create_object, get_next_ID_for_Table, update_object_attribute
 from ..util import update_object_attributes
 from .MLContext_sql_utils import create_train_iteration_objects, load_init_parameters
 from .train_utils import sample_snapshot
-from .MLContext_utils import split_X_and_y
+from .MLContext_utils import split_X_y_z
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from .TrainInterationInterface import TrainInterationInterface
+from .TrainInterationInterface import TrainPreperationInterface
 from.interfaces.VarianceFilter import VarianceFilter
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import balanced_accuracy_score
@@ -23,9 +23,10 @@ class MLContext:
         sqlContext["session"] = self.session
         self.context = sqlContext
         self.hooks = list()
+        self.train_methods = list()
         self.xai_hooks = list()
-        self.train_X, self.train_y = split_X_and_y(self.train)
-        self.test_X, self.test_y = split_X_and_y(self.test)
+        self.train_X, self.train_y, self.train_db_indexes = split_X_y_z(self.train)
+        self.test_X, self.test_y, self.test_db_indexes = split_X_y_z(self.test)
     
     def start_train_process(self):
         try:
@@ -80,7 +81,8 @@ class MLContext:
             
             for i in range(3): 
                 self.iter_args[i] = dict()
-                self.iter_objs[i] = dict()                
+                self.iter_objs[i] = dict()    
+                self.iter_objs[i]["models"] = dict()               
                 self.start_train_iteration(i)
                 
         except SQLAlchemyError as e:
@@ -94,44 +96,48 @@ class MLContext:
         #CreateSQLObjects create_train_iteration_objects(mlContext)
         create_train_iteration_objects(self, i)
         self.session.commit()
+        
         #CreateTrainingObjects
         
         self.iter_train_X[i] = self.train_X
         self.iter_train_y[i] = self.train_y
         self.iter_test_X[i] = self.test_X
-        self.iter_test_y[i] = self.test_y  
-
-        self.iter_args[i] =  {
-            "max_depth": hp.choice('max_depth', range(1,100)),
-            "min_samples_leaf": hp.choice("min_samples_leaf", range(1,15)),
-            "random_state": hp.randint("random_state", 3000),
-            "max_features": hp.choice('max_features', range(1,50)),
-            "criterion": hp.choice('criterion', ["gini", "entropy"]),
-            #"variance_threshold_var_fac": hp.randint("variance_threshold", 100)
-        }         
+        self.iter_test_y[i] = self.test_y                 
         
         for hook in self.hooks:
             hook.populate(i)
-                
+        for train_method in self.train_methods:
+            train_method.populate(i)
         
         self.iter_args[i]["mlContext"] = self
         self.iter_args[i]["i"] = i 
         
         trials = Trials()
-        params = fmin(callback, dict(self.iter_args[i]), algo = tpe.suggest, max_evals = 10, trials = trials)
         
-        for hook in self.xai_hooks:
-            hook.call()
-            
+        
+        for train_method in self.train_methods:
+            tm_dic = dict()
+            tm_dic["train_method"] = train_method
+            args = {**self.iter_args[i], **tm_dic}
+            params = fmin(callback, args, algo = tpe.suggest, max_evals = 10, trials = trials)
+            train_method.upload(i)
+        
         
 
 def callback(args):   
+    #IMPORTANT: iterargs != args; args contains the selected parameters by hyperopt iterargs contains the definitions; use args for referening these otherwise iterargs;
+    #TODO: Refactor dictionary structure to typed objects
     i = args["i"]
     mlContext = args["mlContext"]
+    train_method = args["train_method"]
+    
     
     for hook in args["mlContext"].hooks:
         hook.calculate(i, args)
-        
+    acc = 1 - train_method.calculate()
+    return {'loss': acc, 'status': STATUS_OK}
+
+
     update_object_attributes(mlContext.context, mlContext.iter_objs[i]["hyperparameter"], 
                     max_depth = int(args["max_depth"]),
                     min_samples_leaf = int(args["min_samples_leaf"]),
