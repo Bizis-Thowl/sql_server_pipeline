@@ -82,7 +82,7 @@ class MLContext:
             for i in range(3): 
                 self.iter_args[i] = dict()
                 self.iter_objs[i] = dict()    
-                self.iter_objs[i]["models"] = dict()               
+                self.iter_objs[i]["model"] = dict()               
                 self.start_train_iteration(i)
                 
         except SQLAlchemyError as e:
@@ -134,7 +134,8 @@ def callback(args):
     
     for hook in args["mlContext"].hooks:
         hook.calculate(i, args)
-    acc = 1 - train_method.calculate()
+        
+    acc = 1 - train_method.calculate(i, args)
     return {'loss': acc, 'status': STATUS_OK}
 
 

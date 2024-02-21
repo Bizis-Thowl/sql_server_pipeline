@@ -37,9 +37,14 @@ def create_train_iteration_objects(mlContext, i):
                                                             id = get_next_ID_for_Table(mlContext.context, "train_process_iteration_compute_result"),
                                                             train_process_iteration_id = mlContext.iter_objs[i]["train_process_iteration"].id)
     
-    mlContext.iter_objs[i]["model"] = create_object(mlContext.context, "train_process_iteration_compute_result",
-                                                            id = get_next_ID_for_Table(mlContext.context, "train_process_iteration_compute_result"),
-                                                            train_process_iteration_id = mlContext.iter_objs[i]["train_process_iteration"].id)    
+    mlContext.iter_objs[i]["model"]["dtc"] = create_object(mlContext.context, "model",
+                                                            id = get_next_ID_for_Table(mlContext.context, "model"),
+                                                            train_process_iteration_id = mlContext.iter_objs[i]["train_process_iteration"].id) 
+    mlContext.session.commit()
+    
+    mlContext.iter_objs[i]["model"]["one_hot"] = create_object(mlContext.context, "model",
+                                                            id = get_next_ID_for_Table(mlContext.context, "model"),
+                                                            train_process_iteration_id = mlContext.iter_objs[i]["train_process_iteration"].id) 
     
     mlContext.iter_objs[i]["model_score"]  = create_object(mlContext.context, "model_score",
                                                 id = get_next_ID_for_Table(mlContext.context, "model_score"),

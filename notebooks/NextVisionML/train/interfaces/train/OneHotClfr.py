@@ -1,10 +1,11 @@
 import torch
-import hyperopt as hp
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 import pandas as pd
 from ...TrainInterface import TrainInterface
 from ....util import update_object_attributes, create_objects
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import balanced_accuracy_score
+from .temp_util import get_trust_scores
 
 class OneHotClfr(TrainInterface):
     def __init__(self, mlContext):
@@ -14,43 +15,53 @@ class OneHotClfr(TrainInterface):
         #TODO:hyperparameter in sql
         train_X = torch.tensor(self.mlContext.iter_train_X[i].values)
         train_y = torch.tensor(self.mlContext.iter_objs[i]["integer_encoded_train_y"])
-        random_seed = self.mlContext.iter_args[i]["random_seed"]
+        random_seed = args[i]["random_seed"]
         input_size = len(train_X.columns)
         num_classes = 5  #TODO:not hadcoded
-        layer_count = self.mlContext.iter_args[i]["layer_count"]
-        num_epochs = self.mlContext.iter_args[i]["num_epochs"]
+        layer_count = args[i]["layer_count"]
+        num_epochs = args[i]["num_epochs"]
                       
         one_hot_encoded = torch.nn.functional.one_hot(train_y, num_classes)
-        
+        print("Hello1")
         torch.manual_seed(random_seed)
-        net = SimpleNetSigmoid(input_size, layer_count)
+        net = SimpleNetSigmoid(input_size, num_classes)
+        print("Hello2")
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(net.parameters(), lr=0.01)
 
         #Training loop
         for epoch in range(num_epochs):
+            print("Hello3")
             outputs = net(one_hot_encoded)
-            loss = criterion(outputs, train_y)
+            print("Hello4")
+            loss = criterion(outputs, torch.ravel(train_y))
+            print("Hello5")
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         
         #Evluation
-        test_X = torch.tensor(self.mlContext.iter_test_X[i].values)        
+        print("Hello6")
+        test_X = torch.tensor(self.mlContext.iter_test_X[i].values) 
+        print("Hello7")       
         pred = net(test_X)
+        print("Hello8") 
         pred = torch.max(pred, 1) #Reverse One Hot
+        print("Hello9") 
         pred_mem = pred.numpy()
-        balanced_accuracy = balanced_accuracy_score(self.mlContext.iter_objs[i]["integer_encoded_test_y"], pred_mem)       
+        balanced_accuracy = balanced_accuracy_score(self.mlContext.iter_objs[i]["integer_encoded_test_y"], pred_mem)   
+        print("Hello10")     
         
         #Cache for upload
         self.mlContext.iter_objs[i]["one_hot_pred"] = pred_mem
         self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"] = balanced_accuracy
-              
-        return balanced_accuracy   
+        
+        
+        return balanced_accuracy
     
     def upload(self, i):        
         update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score"],
-                             balanced_accuracy_score = self.mlContext.iter_objs[i]["balanced_accuracy"])
+                             balanced_accuracy_score = self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"])
         pred_mem = self.mlContext.iter_objs[i]["one_hot_pred"]
         label_encoder = self.mlContext.iter_objs[i]["label_encoder_one_hot"]
         
@@ -69,7 +80,7 @@ class OneHotClfr(TrainInterface):
             "num_epochs": hp.randint("num_epochs", 15), #iterargs
         }       
         self.mlContext.iter_args[i].update(args)  
-        self.mlContext.iter_objs[i]["models"]["one_hot"] = update_object_attributes(self.mlContext, self.mlContext.iter_objs[i]["model"],
+        self.mlContext.iter_objs[i]["model"]["one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["one_hot"],
                                                                         path_to_model = "one_hot") #TODO: Refactor
         label_encoder = LabelEncoder()
         integer_encoded_train = label_encoder.fit_transform(self.mlContext.iter_train_y[i])
