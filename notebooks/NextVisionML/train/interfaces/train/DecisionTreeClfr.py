@@ -26,12 +26,21 @@ class DecisionTreeClfr(TrainInterface):
             criterion = args["criterion"],
         )
         dtc.fit(self.mlContext.iter_train_X[i], self.mlContext.iter_train_y[i])
-        self.mlContext.iter_objs[i]["model"]["dtc"] = dtc
+        #self.mlContext.iter_objs[i]["model"]["dtc"] = dtc
         eval_predict = dtc.predict(self.mlContext.iter_test_X[i]) 
         balanced_accuracy = balanced_accuracy_score(self.mlContext.iter_test_y[i], eval_predict) 
         
         self.mlContext.iter_objs[i]["dtc_pred"] = eval_predict
         self.mlContext.iter_objs[i]["dtc_balanced_accuracy"] = balanced_accuracy
+        self.mlContext.iter_objs[i]["dtc_trust_scores"] = get_trust_scores(self.mlContext.iter_test_y[i], eval_predict)
+        
+        self.mlContext.iter_objs[i]["hyperparameter"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["hyperparameter"], 
+            max_depth = int(args["max_depth"]),
+            min_samples_leaf = int(args["min_samples_leaf"]),
+            random_state = int(args["random_state"]),
+            max_features = int(args["max_features"]),
+            criterion = args["criterion"],    
+        ) 
         
         return balanced_accuracy        
         
@@ -46,24 +55,17 @@ class DecisionTreeClfr(TrainInterface):
         self.mlContext.iter_args[i].update(args) 
         self.mlContext.iter_objs[i]["model"]["dtc"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["dtc"],
                                                                         path_to_model = "dtc")
-    def update(self, i, args):
-        self.mlContext.iter_objs[i]["model_score"] = update_object_attributes(self.mlContext.mlContext.context, self.mlContext.iter_objs[i]["model_score"],
+    def upload(self, i):
+        self.mlContext.iter_objs[i]["model_score_dtr"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score"],
             balanced_accuracy_score = self.mlContext.iter_objs[i]["dtc_balanced_accuracy"])
-        self.mlContext.iter_objs[i]["model_score"] = update_object_attributes(self.mlContext.mlContext.context, self.mlContext.iter_objs[i]["hyperparameter"], 
-            max_depth = int(args["max_depth"]),
-            min_samples_leaf = int(args["min_samples_leaf"]),
-            random_state = int(args["random_state"]),
-            max_features = int(args["max_features"]),
-            criterion = args["criterion"],    
-        ) 
         
-        
-        df = pd.Dataframe()        
+        df = pd.DataFrame()        
         df["pred"] = self.mlContext.iter_objs[i]["dtc_pred"]
+        df["trust_score"] = self.mlContext.iter_objs[i]["dtc_trust_scores"]
         df["datapoint_id"] = self.mlContext.test_db_indexes
-        df["model_id"] = self.mlContext.iter_objs[i]["model"].id
+        df["model_id"] = self.mlContext.iter_objs[i]["model"]["dtc"].id
         df.reset_index(inplace=True)
-        df.to_sql("metmast", con = self.mlContext.engine, index = False, if_exists='append')
+        df.to_sql("label_categorical", con = self.mlContext.engine, index = False, if_exists='append')
 
         
     

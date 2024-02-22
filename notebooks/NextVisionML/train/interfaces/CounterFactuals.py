@@ -10,8 +10,7 @@ class CounterFactuals(XAIInterface):
     
     def call(self, i, args):
         train_dataset = pd.Concat([self.mlContext.iter_train_X[i], self.mlContext.iter_train_y[i]], axis = 0)
-        d = dice_ml.Data(
-            dataframe=train_dataset
+        d = dice_ml.Data( dataframe=train_dataset,
             continuous_features=self.mlContext.iter_train_X[i].columns,
             outcome_name="Risk-Level")
 

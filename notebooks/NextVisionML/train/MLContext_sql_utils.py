@@ -45,10 +45,15 @@ def create_train_iteration_objects(mlContext, i):
     mlContext.iter_objs[i]["model"]["one_hot"] = create_object(mlContext.context, "model",
                                                             id = get_next_ID_for_Table(mlContext.context, "model"),
                                                             train_process_iteration_id = mlContext.iter_objs[i]["train_process_iteration"].id) 
+    mlContext.session.commit()
     
-    mlContext.iter_objs[i]["model_score"]  = create_object(mlContext.context, "model_score",
+    mlContext.iter_objs[i]["model_score_dtc"]  = create_object(mlContext.context, "model_score",
                                                 id = get_next_ID_for_Table(mlContext.context, "model_score"),
-                                                train_process_iteration_id = mlContext.iter_objs[i]["train_process_iteration"].id)
+                                                model_id = mlContext.iter_objs[i]["model"]["dtc"].id)
+    mlContext.session.commit()
+    mlContext.iter_objs[i]["model_score_one_hot"]  = create_object(mlContext.context, "model_score",
+                                                id = get_next_ID_for_Table(mlContext.context, "model_score"),
+                                                model_id = mlContext.iter_objs[i]["model"]["one_hot"].id)
     mlContext.session.commit()
     
 def upload_prediction(row, mlContext, i):

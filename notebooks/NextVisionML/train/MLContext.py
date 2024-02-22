@@ -110,12 +110,10 @@ class MLContext:
             train_method.populate(i)
         
         self.iter_args[i]["mlContext"] = self
-        self.iter_args[i]["i"] = i 
-        
-        trials = Trials()
-        
+        self.iter_args[i]["i"] = i   
         
         for train_method in self.train_methods:
+            trials = Trials()
             tm_dic = dict()
             tm_dic["train_method"] = train_method
             args = {**self.iter_args[i], **tm_dic}
@@ -136,35 +134,4 @@ def callback(args):
         hook.calculate(i, args)
         
     acc = 1 - train_method.calculate(i, args)
-    return {'loss': acc, 'status': STATUS_OK}
-
-
-    update_object_attributes(mlContext.context, mlContext.iter_objs[i]["hyperparameter"], 
-                    max_depth = int(args["max_depth"]),
-                    min_samples_leaf = int(args["min_samples_leaf"]),
-                    random_state = int(args["random_state"]),
-                    max_features = int(args["max_features"]),
-                    criterion = args["criterion"],    
-    )
-    
-    dtr = DecisionTreeClassifier(
-        max_depth = args["max_depth"],
-        min_samples_leaf = args["min_samples_leaf"],
-        random_state = args["random_state"],
-        max_features = args["max_features"],
-        criterion = args["criterion"],
-    )
-    dtr.fit(mlContext.iter_train_X[i], mlContext.iter_train_y[i])
-    mlContext.iter_objs[i]["model"] = dtr
-    eval_predict = dtr.predict(mlContext.iter_test_X[i]) 
-       
-    #TODO:Evaluate using full train data vs validation data or split test data...; intention:validation integrity, validation data is incorporated in trainings process
-    accuracy = balanced_accuracy_score(mlContext.iter_test_y[i], eval_predict) 
-    
-    #args["train_process_iteration_score"].balanced_accuracy_score = accuracy TODO: an model_scores anhägen
-    
-    update_object_attributes(mlContext.context, mlContext.iter_objs[i]["train_process_iteration_score"],
-                             balanced_accuracy_score = accuracy)
-    #session.commit()
-    acc = 1-accuracy
     return {'loss': acc, 'status': STATUS_OK}
