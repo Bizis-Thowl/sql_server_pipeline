@@ -32,7 +32,12 @@ class DecisionTreeClfr(TrainInterface):
         
         self.mlContext.iter_objs[i]["dtc_pred"] = eval_predict
         self.mlContext.iter_objs[i]["dtc_balanced_accuracy"] = balanced_accuracy
-        self.mlContext.iter_objs[i]["dtc_trust_scores"] = get_trust_scores(self.mlContext.iter_test_y[i], eval_predict)
+        
+        test_pred = pd.DataFrame(eval_predict.reshape(-1, 1))  
+        class_mapping = {"low": 0, "low-med": 1, "medium": 2, "med-high": 3, "high": 4}
+        train_y_ = self.mlContext.iter_train_y[i]["Risk Level"].map(class_mapping)
+        test_pred = test_pred[0].map(class_mapping)
+        self.mlContext.iter_objs[i]["dtc_trust_scores"] = get_trust_scores(self.mlContext.iter_train_X[i].values, train_y_, self.mlContext.iter_test_X[i].values, test_pred)
         
         self.mlContext.iter_objs[i]["hyperparameter"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["hyperparameter"], 
             max_depth = int(args["max_depth"]),
@@ -56,7 +61,7 @@ class DecisionTreeClfr(TrainInterface):
         self.mlContext.iter_objs[i]["model"]["dtc"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["dtc"],
                                                                         path_to_model = "dtc")
     def upload(self, i):
-        self.mlContext.iter_objs[i]["model_score_dtr"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score"],
+        self.mlContext.iter_objs[i]["model_score_dtc"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score_dtc"],
             balanced_accuracy_score = self.mlContext.iter_objs[i]["dtc_balanced_accuracy"])
         
         df = pd.DataFrame()        
@@ -64,8 +69,7 @@ class DecisionTreeClfr(TrainInterface):
         df["trust_score"] = self.mlContext.iter_objs[i]["dtc_trust_scores"]
         df["datapoint_id"] = self.mlContext.test_db_indexes
         df["model_id"] = self.mlContext.iter_objs[i]["model"]["dtc"].id
-        df.reset_index(inplace=True)
-        df.to_sql("label_categorical", con = self.mlContext.engine, index = False, if_exists='append')
+        df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
 
         
     

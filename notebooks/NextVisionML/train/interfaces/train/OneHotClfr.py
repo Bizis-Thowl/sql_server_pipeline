@@ -6,6 +6,7 @@ from ....util import update_object_attributes, create_objects
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import balanced_accuracy_score
 from .temp_util import get_trust_scores
+import numpy as np
 
 class OneHotClfr(TrainInterface):
     def __init__(self, mlContext):
@@ -22,8 +23,8 @@ class OneHotClfr(TrainInterface):
         random_seed = args["random_seed"]
         input_size = len(self.mlContext.iter_train_X[i].columns)
         num_classes = 5
-        layer_count = args["layer_count"]+3
-        num_epochs = args["num_epochs"]*10
+        layer_count = args["layer_count"]+2
+        num_epochs = args["num_epochs"]
         one_hot_encoded = torch.nn.functional.one_hot(train_y.to(torch.int64), num_classes).float()
         torch.manual_seed(random_seed)
         net = SimpleNetSoftmax(input_size, num_classes, layer_count)
@@ -51,8 +52,8 @@ class OneHotClfr(TrainInterface):
         
         #Cache for upload
         self.mlContext.iter_objs[i]["one_hot_pred"] = pred.numpy()
-        self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"] = balanced_accuracy        
-        self.mlContext.iter_objs[i]["one_hot_trust_scores"] = get_trust_scores(self.mlContext.iter_objs[i]["integer_encoded_test_y"], pred)
+        self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"] = balanced_accuracy
+        self.mlContext.iter_objs[i]["one_hot_trust_scores"] = get_trust_scores(normalized_X.numpy(), pd.DataFrame(train_y.numpy().reshape(-1,1).astype(dtype = np.int64))[0], test_X_n.numpy(), pred.numpy().reshape(-1,1))
         
         return balanced_accuracy
     
@@ -70,13 +71,12 @@ class OneHotClfr(TrainInterface):
         df["trust_score"] = self.mlContext.iter_objs[i]["one_hot_trust_scores"] 
         df["datapoint_id"] = self.mlContext.test_db_indexes
         df["model_id"] = self.mlContext.iter_objs[i]["model"]["one_hot"].id
-        df.reset_index(inplace=True)
-        df.to_sql("label_categorical", con = self.mlContext.engine, index = False, if_exists='append')
+        df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
         
     def populate(self, i):
         args = {
-            "random_seed": hp.randint("random_seed", 1000),
-            "layer_count": hp.randint("layer_count", 3), 
+            "random_seed": hp.randint("random_seed", 5000),
+            "layer_count": hp.randint("layer_count", 2), 
             "num_epochs": hp.randint("num_epochs", 15),
         }       
         self.mlContext.iter_args[i].update(args)  
