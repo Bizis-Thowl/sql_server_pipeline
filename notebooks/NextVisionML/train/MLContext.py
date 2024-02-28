@@ -107,6 +107,7 @@ class MLContext:
         
         for hook in self.hooks:
             hook.populate(i)
+            
         for train_method in self.train_methods:
             train_method.populate(i)
         
@@ -119,34 +120,11 @@ class MLContext:
             tm_dic["train_method"] = train_method
             args = {**self.iter_args[i], **tm_dic}
             params = fmin(fn = callback, args = args, algo = tpe.suggest, max_evals = 2, trials = trials)
-            train_method.evaluate(i)
+            train_method.eval_predict = train_method.model.predict()
             train_method.upload(i)
-        
-        
+
 
 def callback(args):   
-    # Define the objective functiondef objective(params):
-    
-    # Calculate the mean score    mean_score = np.mean(scores)
-    # Hyperopt aims to minimize the objective, so negate accuracyreturn {'loss': -mean_score, 'status': STATUS_OK}
-    #IMPORTANT: iterargs != args; args contains the selected parameters by hyperopt iterargs contains the definitions; use args for referening these otherwise iterargs;
-    
-    #TODO: Refactor dictionary structure to typed objects
-    i = args["i"]
-    mlContext = args["mlContext"]
-    train_method = args["train_method"]
-    
-    
-    for train_preparation_methods in args["mlContext"].hooks:
-        train_preparation_methods.calculate(i, args)
-        
-    scores = cross_val_score(train_method, None, None, cv=cv, scoring='accuracy') 
-       
-    acc = 1 - train_method.calculate(i, args)
-    return {'loss': acc, 'status': STATUS_OK}
-
-
-def callback_skl(args):   
     # Define the objective functiondef objective(params):
     # Hyperopt aims to minimize the objective, so negate accuracyreturn {'loss': -mean_score, 'status': STATUS_OK}
     #IMPORTANT: iterargs != args; args contains the selected parameters by hyperopt iterargs contains the definitions; use args for referening these otherwise iterargs;
@@ -161,7 +139,7 @@ def callback_skl(args):
 
     train_method.model = train_method.getModel()
         
-    train_method.score = cross_val_score(model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=cv, scoring='accuracy')   
+    train_method.score = cross_val_score(train_method.model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=cv, scoring='accuracy')   
      
-    acc = 1 - cvs
+    acc = 1 - train_method.score
     return {'loss': acc, 'status': STATUS_OK}

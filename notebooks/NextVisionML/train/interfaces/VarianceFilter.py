@@ -1,4 +1,4 @@
-from ..TrainInterationInterface import TrainPreperationInterface
+from ..TrainPreperationInterface import TrainPreperationInterface
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 from sklearn.feature_selection import VarianceThreshold
 from ...util import create_object, get_feature_id_by_name, get_next_ID_for_Table
