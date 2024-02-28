@@ -7,10 +7,11 @@ from .MLContext_sql_utils import create_train_iteration_objects, load_init_param
 from .train_utils import sample_snapshot
 from .MLContext_utils import split_X_y_z
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from .TrainInterationInterface import TrainPreperationInterface
+from .TrainPreperationInterface import TrainPreperationInterface
 from.interfaces.VarianceFilter import VarianceFilter
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import balanced_accuracy_score
+from .defines import defines
 
 class MLContext:
     def __init__(self):
@@ -117,21 +118,50 @@ class MLContext:
             tm_dic = dict()
             tm_dic["train_method"] = train_method
             args = {**self.iter_args[i], **tm_dic}
-            params = fmin(callback, args, algo = tpe.suggest, max_evals = 2, trials = trials)
+            params = fmin(fn = callback, args = args, algo = tpe.suggest, max_evals = 2, trials = trials)
+            train_method.evaluate(i)
             train_method.upload(i)
         
         
 
 def callback(args):   
+    # Define the objective functiondef objective(params):
+    
+    # Calculate the mean score    mean_score = np.mean(scores)
+    # Hyperopt aims to minimize the objective, so negate accuracyreturn {'loss': -mean_score, 'status': STATUS_OK}
     #IMPORTANT: iterargs != args; args contains the selected parameters by hyperopt iterargs contains the definitions; use args for referening these otherwise iterargs;
+    
     #TODO: Refactor dictionary structure to typed objects
     i = args["i"]
     mlContext = args["mlContext"]
     train_method = args["train_method"]
     
     
-    for hook in args["mlContext"].hooks:
-        hook.calculate(i, args)
+    for train_preparation_methods in args["mlContext"].hooks:
+        train_preparation_methods.calculate(i, args)
         
+    scores = cross_val_score(train_method, None, None, cv=cv, scoring='accuracy') 
+       
     acc = 1 - train_method.calculate(i, args)
+    return {'loss': acc, 'status': STATUS_OK}
+
+
+def callback_skl(args):   
+    # Define the objective functiondef objective(params):
+    # Hyperopt aims to minimize the objective, so negate accuracyreturn {'loss': -mean_score, 'status': STATUS_OK}
+    #IMPORTANT: iterargs != args; args contains the selected parameters by hyperopt iterargs contains the definitions; use args for referening these otherwise iterargs;
+    
+    #TODO: Refactor dictionary structure to typed objects
+    i = args["i"]
+    mlContext = args["mlContext"]
+    train_method = args["train_method"]
+    
+    for train_preparation_methods in args["mlContext"].hooks:
+        train_preparation_methods.calculate(i, args)
+
+    train_method.model = train_method.getModel()
+        
+    train_method.score = cross_val_score(model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=cv, scoring='accuracy')   
+     
+    acc = 1 - cvs
     return {'loss': acc, 'status': STATUS_OK}
