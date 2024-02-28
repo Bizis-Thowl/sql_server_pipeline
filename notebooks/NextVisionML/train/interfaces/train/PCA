@@ -1,0 +1,12 @@
+
+from ...TrainInterface import TrainInterface
+
+class PcaUnsupervised(TrainInterface):
+    
+    def __init__(self, mlContext):
+        super().__init__(mlContext)
+        
+    def calculate(self, i, args):
+        pass
+
+    
