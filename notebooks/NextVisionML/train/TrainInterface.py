@@ -3,6 +3,9 @@ import pandas as pd
 class TrainInterface:
     def __init__(self, mlContext):
         self.mlContext = mlContext
+        
+    def get_model(self, i, args): # Derive Hyperopt args from method not from context.iter_args[i]!!!!!
+        pass
     
     def populate(self, i):
         pass
