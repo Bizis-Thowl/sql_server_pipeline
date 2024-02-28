@@ -1,0 +1,2 @@
+class defines:
+    test = "test"
