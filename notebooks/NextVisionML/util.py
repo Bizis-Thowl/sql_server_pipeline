@@ -17,7 +17,7 @@ def get_engine():
     PASSWORD = os.getenv("DB_PW")
     DRIVER = os.getenv("DB_DRIVER")
     engine = create_engine(
-        f"mssql+pyodbc://{USER}:{PASSWORD}@{SERVER}:{PORT}/{DATABASE}?driver={DRIVER}&TrustServerCertificate=yes")
+        f"mssql+pyodbc://{USER}:{PASSWORD}@{SERVER}:{PORT}/{DATABASE}?driver={DRIVER}&TrustServerCertificate=yes", pool_size=10000, max_overflow=-1)
     return engine
 
 def get_engine_trusted():
@@ -26,7 +26,7 @@ def get_engine_trusted():
 
     # Construct the connection string with trusted connection
     connection_string = f'mssql+pyodbc://@{server}:1433/{database}?trusted_connection=yes&driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes' #TODO:Certificate
-    engine = create_engine(connection_string)
+    engine = create_engine(connection_string, pool_size=1000, max_overflow=-1)
     return engine
 
 def create_object(context, table_name, with_commit=False, **kwargs):

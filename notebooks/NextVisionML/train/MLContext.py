@@ -69,7 +69,7 @@ class MLContext:
             for i, index in enumerate(used_indexes):            
                 train_process_train_data_junction = create_object(self.context, "datapoint_train_process_junction",
                                                                 train_process_id = self.train_process.id,
-                                                                train_data_id = index + 1) 
+                                                                train_data_id = index + 1)
                 self.session.commit()
             
             self.iter_args = dict()
@@ -117,7 +117,7 @@ class MLContext:
             tm_dic = dict()
             tm_dic["train_method"] = train_method
             args = {**self.iter_args[i], **tm_dic}
-            params = fmin(callback, args, algo = tpe.suggest, max_evals = 10, trials = trials)
+            params = fmin(callback, args, algo = tpe.suggest, max_evals = 2, trials = trials)
             train_method.upload(i)
         
         
