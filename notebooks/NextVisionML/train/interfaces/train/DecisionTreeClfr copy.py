@@ -1,4 +1,4 @@
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+from hyperopt import hp
 import pandas as pd
 from ...TrainInterface import TrainInterface
 from ....util import update_object_attributes
