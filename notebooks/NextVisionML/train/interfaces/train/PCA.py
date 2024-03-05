@@ -12,13 +12,12 @@ class PcaUnsupervised(TrainInterface):
         
     def get_model(self, i, args):        
         clf = CustomPCA(
-            n_components = args["components"]
+            n_components = int(args["components"])
         )
         self.mlContext.iter_objs[i]["hyperparameter"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["hyperparameter"], 
             n_components = int(args["components"])  
         )
         return clf
-        
 
     def populate(self, i):
         num_dims = len(self.mlContext.iter_train_X[i])

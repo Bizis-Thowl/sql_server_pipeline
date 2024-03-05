@@ -39,5 +39,8 @@ class VarianceFilter(TrainPreperationInterface):
     def populate(self, i):
         self.mlContext.iter_args[i]["variance_threshold_var_fac"] = hp.randint("variance_threshold", 100)
         
+    def upload(self, i):
+        pass
+        
         
         

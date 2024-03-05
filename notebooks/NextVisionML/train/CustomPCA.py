@@ -1,6 +1,7 @@
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA
 import numpy as np
+import pandas as pd
 
 class CustomPCA(BaseEstimator, TransformerMixin):
     def __init__(self, n_components=2, filter_value='low'):
@@ -8,8 +9,13 @@ class CustomPCA(BaseEstimator, TransformerMixin):
         self.filter_value = filter_value
         self.pca = PCA(n_components=self.n_components)
         
-    def fit(self, X, y=None):
+    def fit(self, X:pd.DataFrame, y=None):
         # Filter X based on y value
+        test = dict()
+        for c in X.columns:
+            b = X[c].isna()
+            test[c] = b
+            
         if y is not None:
             filtered_X = X[y == self.filter_value]
         else:

@@ -81,7 +81,7 @@ def get_next_ID_for_Table(sqlContext:dict, name:str):
     table = sqlContext["Base"].classes[name]
     return sqlContext["session"].query(table.id).count() + 1 
         
-def update_object_attributes(context, entity, **kwargs):
+def update_object_attributes(context, entity, commit = True, **kwargs):
     """
     Update the attributes of a given SQLAlchemy entity.
 
@@ -92,5 +92,5 @@ def update_object_attributes(context, entity, **kwargs):
     for attr, value in kwargs.items():
         setattr(entity, attr, value)
     #context["session"].add(entity) necessary??
-    context["session"].commit()
+    if(commit): context["session"].commit()
     return entity

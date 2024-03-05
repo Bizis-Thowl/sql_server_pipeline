@@ -5,14 +5,13 @@ from ...TrainInterface import TrainInterface
 from ....util import update_object_attributes, create_objects
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import balanced_accuracy_score
-from .temp_util import get_trust_scores
 import numpy as np
 
 class OneHotClfr(TrainInterface):
     def __init__(self, mlContext):
         super().__init__(mlContext)
         
-    def calculate(self, i, args):
+    def get_Model(self, i, args):
         train_X = torch.tensor(self.mlContext.iter_train_X[i].astype('float32').values)
         min, _ = train_X.min(dim=0)
         max, _ = train_X.max(dim=0)       
@@ -53,25 +52,23 @@ class OneHotClfr(TrainInterface):
         #Cache for upload
         self.mlContext.iter_objs[i]["one_hot_pred"] = pred.numpy()
         self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"] = balanced_accuracy
-        self.mlContext.iter_objs[i]["one_hot_trust_scores"] = get_trust_scores(normalized_X.numpy(), pd.DataFrame(train_y.numpy().reshape(-1,1).astype(dtype = np.int64))[0], test_X_n.numpy(), pred.numpy().reshape(-1,1))
-        
         return balanced_accuracy
     
     def upload(self, i):      
-        self.mlContext.iter_objs[i]["model"]["one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["one_hot"],
-                                                                        path_to_model = "one_hot")  
-        self.mlContext.iter_objs[i]["model_score_one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score_one_hot"],
-                             balanced_accuracy_score = self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"])
-        pred_mem = self.mlContext.iter_objs[i]["one_hot_pred"]
-        label_encoder = self.mlContext.iter_objs[i]["label_encoder_one_hot"]
+        pass
+        #self.mlContext.iter_objs[i]["model"]["one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["one_hot"],
+                                                                        #path_to_model = "one_hot")  
+        #self.mlContext.iter_objs[i]["model_score_one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score_one_hot"],
+                             #balanced_accuracy_score = self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"])
+        #pred_mem = self.mlContext.iter_objs[i]["one_hot_pred"]
+        #label_encoder = self.mlContext.iter_objs[i]["label_encoder_one_hot"]
         
-        pred_labeled = label_encoder.inverse_transform(pred_mem)
-        df = pd.DataFrame()                
-        df["pred"] = pred_labeled
-        df["trust_score"] = self.mlContext.iter_objs[i]["one_hot_trust_scores"] 
-        df["datapoint_id"] = self.mlContext.test_db_indexes
-        df["model_id"] = self.mlContext.iter_objs[i]["model"]["one_hot"].id
-        df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
+        #pred_labeled = label_encoder.inverse_transform(pred_mem)
+        #df = pd.DataFrame()                
+        #df["pred"] = pred_labeled
+        #df["datapoint_id"] = self.mlContext.test_db_indexes
+        #df["model_id"] = self.mlContext.iter_objs[i]["model"]["one_hot"].id
+        #df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
         
     def populate(self, i):
         args = {

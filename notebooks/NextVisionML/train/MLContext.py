@@ -11,6 +11,8 @@ from .TrainPreperationInterface import TrainPreperationInterface
 from.interfaces.VarianceFilter import VarianceFilter
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import balanced_accuracy_score
+from sklearn.model_selection import cross_val_score
+import numpy as np
 from .defines import defines
 
 class MLContext:
@@ -23,7 +25,7 @@ class MLContext:
         self.session = Session(bind=self.engine)
         sqlContext["session"] = self.session
         self.context = sqlContext
-        self.hooks = list()
+        self.train_preparation_methods = list()
         self.train_methods = list()
         self.xai_hooks = list()
         self.train_X, self.train_y, self.train_db_indexes = split_X_y_z(self.train)
@@ -105,8 +107,8 @@ class MLContext:
         self.iter_test_X[i] = self.test_X
         self.iter_test_y[i] = self.test_y                 
         
-        for hook in self.hooks:
-            hook.populate(i)
+        for train_preparation_method in self.train_preparation_methods:
+            train_preparation_method.populate(i)
             
         for train_method in self.train_methods:
             train_method.populate(i)
@@ -119,8 +121,8 @@ class MLContext:
             tm_dic = dict()
             tm_dic["train_method"] = train_method
             args = {**self.iter_args[i], **tm_dic}
-            params = fmin(fn = callback, args = args, algo = tpe.suggest, max_evals = 2, trials = trials)
-            train_method.eval_predict = train_method.model.predict()
+            params = fmin(fn = callback, space = args, algo = tpe.suggest, max_evals = 2, trials = trials)
+            train_method.eval_predict = train_method.model.predict(self.iter_test_X[i])
             train_method.upload(i)
 
 
@@ -134,12 +136,14 @@ def callback(args):
     mlContext = args["mlContext"]
     train_method = args["train_method"]
     
-    for train_preparation_methods in args["mlContext"].hooks:
-        train_preparation_methods.calculate(i, args)
+    for train_preparation_method in args["mlContext"].train_preparation_methods:
+        train_preparation_method.calculate(i, args)
 
-    train_method.model = train_method.getModel()
-        
-    train_method.score = cross_val_score(train_method.model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=cv, scoring='accuracy')   
+    train_method.model = train_method.get_model(i, args)
+    
+    train_method.model.fit(mlContext.iter_train_X[i], mlContext.iter_train_y[i])
+            
+    train_method.score = cross_val_score(train_method.model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=2, scoring='accuracy')   
      
-    acc = 1 - train_method.score
+    acc = 1 - np.mean(train_method.score)
     return {'loss': acc, 'status': STATUS_OK}
