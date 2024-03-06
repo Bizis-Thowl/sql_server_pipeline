@@ -73,7 +73,7 @@ def get_feature_id_by_name(context, feature_name):
     engine = session.get_bind()
     base = context["Base"]
     query = session.query(base.classes.feature)
-    df = pd.read_sql_query(query.statement, engine)
+    df = pd.read_sql_query(query.statement, engine.connect())
     feature_id = df[df["name"] == feature_name].iloc[0]["id"]
     return feature_id
 

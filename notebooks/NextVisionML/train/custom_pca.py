@@ -12,12 +12,15 @@ class CustomPCA(BaseEstimator, TransformerMixin):
     def fit(self, X: pd.DataFrame, y=None):
         # Filter X based on y value            
         if y is not None:
-            filtered_X = X[y == self.filter_value]
+            filtered_X = X[y["Risk Level"] == self.filter_value]
         else:
             filtered_X = X
 
         # Preprocess to remove rows with NaN values
         filtered_X = filtered_X.dropna()
+
+        print(X.shape)
+        print(filtered_X.shape)
 
         # Check if filtered_X is empty after preprocessing
         if not filtered_X.empty:
