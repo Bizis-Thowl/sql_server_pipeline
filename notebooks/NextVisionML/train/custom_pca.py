@@ -9,20 +9,24 @@ class CustomPCA(BaseEstimator, TransformerMixin):
         self.filter_value = filter_value
         self.pca = PCA(n_components=self.n_components)
         
-    def fit(self, X:pd.DataFrame, y=None):
-        # Filter X based on y value
-        test = dict()
-        for c in X.columns:
-            b = X[c].isna()
-            test[c] = b
-            
+    def fit(self, X: pd.DataFrame, y=None):
+        # Filter X based on y value            
         if y is not None:
             filtered_X = X[y == self.filter_value]
         else:
             filtered_X = X
+
+        # Preprocess to remove rows with NaN values
+        filtered_X = filtered_X.dropna()
+
+        # Check if filtered_X is empty after preprocessing
+        if not filtered_X.empty:
+            # Fit PCA on preprocessed data
+            self.pca.fit(filtered_X)
+        else:
+            # Handle the case where filtered_X is empty
+            print("Warning: No data to fit PCA on after filtering and preprocessing.")
         
-        # Fit PCA on filtered data
-        self.pca.fit(filtered_X)
         return self
     
     def predict(self, X, base_threshold=0.1):

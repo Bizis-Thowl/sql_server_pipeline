@@ -3,7 +3,7 @@ from ...TrainInterface import TrainInterface
 from sklearn.decomposition import PCA
 from hyperopt import hp
 from ....util import update_object_attributes
-from ...CustomPCA import CustomPCA
+from ...custom_pca import CustomPCA
 
 class PcaUnsupervised(TrainInterface):
     
