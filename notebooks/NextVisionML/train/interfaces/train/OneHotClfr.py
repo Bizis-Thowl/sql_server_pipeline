@@ -8,6 +8,8 @@ from sklearn.metrics import balanced_accuracy_score
 import numpy as np
 
 class OneHotClfr(TrainInterface):
+    eval_predict = None
+    
     def __init__(self, mlContext):
         super().__init__(mlContext)
         
@@ -54,21 +56,20 @@ class OneHotClfr(TrainInterface):
         self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"] = balanced_accuracy
         return balanced_accuracy
     
-    def upload(self, i):      
-        pass
-        #self.mlContext.iter_objs[i]["model"]["one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["one_hot"],
-                                                                        #path_to_model = "one_hot")  
-        #self.mlContext.iter_objs[i]["model_score_one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score_one_hot"],
-                             #balanced_accuracy_score = self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"])
-        #pred_mem = self.mlContext.iter_objs[i]["one_hot_pred"]
-        #label_encoder = self.mlContext.iter_objs[i]["label_encoder_one_hot"]
+    def upload(self, i):
+        self.mlContext.iter_objs[i]["model"]["one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["one_hot"],
+            path_to_model = "one_hot")  
+        self.mlContext.iter_objs[i]["model_score_one_hot"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score_one_hot"],
+            balanced_accuracy_score = self.mlContext.iter_objs[i]["one_hot_balanced_accuracy"])
+        pred_mem = self.eval_predict
+        label_encoder = self.mlContext.iter_objs[i]["label_encoder_one_hot"]
         
-        #pred_labeled = label_encoder.inverse_transform(pred_mem)
-        #df = pd.DataFrame()                
-        #df["pred"] = pred_labeled
-        #df["datapoint_id"] = self.mlContext.test_db_indexes
-        #df["model_id"] = self.mlContext.iter_objs[i]["model"]["one_hot"].id
-        #df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
+        pred_labeled = label_encoder.inverse_transform(pred_mem)
+        df = pd.DataFrame()                
+        df["pred"] = pred_labeled
+        df["datapoint_id"] = self.mlContext.test_db_indexes
+        df["model_id"] = self.mlContext.iter_objs[i]["model"]["one_hot"].id
+        df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
         
     def populate(self, i):
         args = {
@@ -96,7 +97,6 @@ class SimpleNetSoftmax(torch.nn.Module):
             self.fc.append(torch.nn.Linear(input_size, input_size*2))
             input_size*=2
         self.fc.append(torch.nn.Linear(input_size, output_size))
-        #self.sigmoid = torch.sigmoid
 
     def forward(self, X):
         y = X

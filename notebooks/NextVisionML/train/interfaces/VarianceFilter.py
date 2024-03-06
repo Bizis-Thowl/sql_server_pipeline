@@ -1,10 +1,16 @@
 from ..TrainPreperationInterface import TrainPreperationInterface
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from sklearn.feature_selection import VarianceThreshold
-from ...util import create_object, get_feature_id_by_name, get_next_ID_for_Table
+from sklearn.feature_selection import _variance_threshold
+from ...util import create_object, get_feature_id_by_name, get_next_ID_for_Table, update_object_attributes
 import numpy as np
+from ..defines import defines
+from sklearn.feature_selection import VarianceThreshold
+from MLContext import MLContext
 
 class VarianceFilter(TrainPreperationInterface):
+    low_variant_signals = None
+    mlContext:MLContext = None
+    
     def __init__(self, mlContext):
         super().__init__(mlContext)
         
@@ -13,11 +19,11 @@ class VarianceFilter(TrainPreperationInterface):
         variance_threshold_floor = self.mlContext.init_parameters.min_threshold_feature_variance
         variance_threshold_fac = self.mlContext.init_parameters.max_threshold_feature_variance - self.mlContext.init_parameters.min_threshold_feature_variance/100
         temp = variance_threshold_fac * args["variance_threshold_var_fac"]
-        threshold =variance_threshold_floor + temp
+        self.threshold =variance_threshold_floor + temp
               
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
         cont_data = self.mlContext.iter_train_X[i].select_dtypes(include=numerics)
-        selector = VarianceThreshold(threshold=threshold)
+        selector = VarianceThreshold(threshold=self.threshold)
         selector.fit(cont_data)
         inverted_list = ~np.array(selector.get_support())   
         #Use a set to make sure that there are no duplicates
@@ -27,20 +33,19 @@ class VarianceFilter(TrainPreperationInterface):
         self.mlContext.iter_train_X[i] = self.mlContext.train_X.drop(columns=list(low_variant_signals))
         self.mlContext.iter_test_X[i] = self.mlContext.test_X.drop(columns=list(low_variant_signals))
         
-        for _, signal in enumerate(low_variant_signals):
-            dropped_feature_variance_filter = create_object(self.mlContext.context, "dropped_feature_variance_filter", with_commit=True,
-                                                            id = int(get_next_ID_for_Table(self.mlContext.context, "dropped_feature_variance_filter")),
-                                                            train_process_iteration_compute_result_id = self.mlContext.iter_objs[i]["train_process_iteration_compute_result"].id,
-                                                            feature_id = int(get_feature_id_by_name(self.mlContext.context, signal)),
-                                                            feature_variance = float(0.0)) #TODO
-        #Hyperparamter Variance Filter
-        
-        
+        self.low_variant_signals = low_variant_signals
     def populate(self, i):
         self.mlContext.iter_args[i]["variance_threshold_var_fac"] = hp.randint("variance_threshold", 100)
         
+        
     def upload(self, i):
-        pass
+        for _, signal in enumerate(self.low_variant_signals):
+            create_object(self.mlContext.context, defines.dropped_feature_variance_filter, with_commit=True,
+                id = int(get_next_ID_for_Table(self.mlContext.context, defines.dropped_feature_variance_filter)),
+                train_process_iteration_compute_result_id = self.mlContext.iter_objs[i]["train_process_iteration_compute_result"].id,
+                feature_id = int(get_feature_id_by_name(self.mlContext.context, signal)))
+        update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i][defines.hyperparameter], commit = True,
+                                    variance_threshold = self.threshold)
         
         
         

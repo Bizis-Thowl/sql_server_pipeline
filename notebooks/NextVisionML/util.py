@@ -22,7 +22,7 @@ def get_engine():
 
 def get_engine_trusted():
     server = 'localhost'
-    database = 'metmast_0_4'
+    database = 'metmast_0_5'
 
     # Construct the connection string with trusted connection
     connection_string = f'mssql+pyodbc://@{server}:1433/{database}?trusted_connection=yes&driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes' #TODO:Certificate

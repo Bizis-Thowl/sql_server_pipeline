@@ -5,3 +5,4 @@ class defines:
     model = "model"
     one_hot = "one_hot"
     decision_tree_classifier = "dtc"
+    dropped_feature_variance_filter = "dropped_feature_variance_filter"
