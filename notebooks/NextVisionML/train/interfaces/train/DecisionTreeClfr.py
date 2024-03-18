@@ -1,10 +1,11 @@
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
 import pandas as pd
+
+from hyperopt import hp
 from ...TrainInterface import TrainInterface
-from ....util import update_object_attributes
+from ....util import update_object_attributes, create_object, get_next_ID_for_Table
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.tree import DecisionTreeClassifier
-from defines import defines
+from ...defines import defines
 
 class DecisionTreeClfr(TrainInterface):
     class class_defines:
@@ -18,11 +19,19 @@ class DecisionTreeClfr(TrainInterface):
         super().__init__(mlContext)
         
     def get_model(self, i, args):
+        extracted_dict = {
+            "max_depth": args["max_depth"],
+            "min_samples_leaf": args["min_samples_leaf"],
+            "random_state": args["random_state"],
+            "max_features": args["max_features"],
+            "criterion": args["criterion"]
+        }
+        self.args = extracted_dict
         dtc = DecisionTreeClassifier(
-            max_depth = args["max_depth"],
-            min_samples_leaf = args["min_samples_leaf"],
-            random_state = args["random_state"],
-            max_features = args["max_features"],
+            max_depth = extracted_dict["max_depth"],
+            min_samples_leaf = extracted_dict["min_samples_leaf"],
+            random_state = extracted_dict["random_state"],
+            max_features = extracted_dict["max_features"],
             criterion = args["criterion"],
         )        
         return dtc             
@@ -37,19 +46,19 @@ class DecisionTreeClfr(TrainInterface):
             "criterion": hp.choice('criterion', ["gini", "entropy"]),
         }  
         self.mlContext.iter_args[i].update(args) 
-        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"],
+        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i]["model"], with_commit=True,
             algorithm = defines.decision_tree_classifier)
         
         
     def upload(self, i):
-        super().upload()
+        TrainInterface.upload(self, i)
         
-        self.mlContext.iter_objs[i][defines.hyperparameter] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i][defines.hyperparameter], 
-            max_depth = int(args["max_depth"]),
-            min_samples_leaf = int(args["min_samples_leaf"]),
-            random_state = int(args["random_state"]),
-            max_features = int(args["max_features"]),
-            criterion = args["criterion"],    
+        self.mlContext.iter_objs[i][defines.hyperparameter] = update_object_attributes(context = self.mlContext.context, entity = self.mlContext.iter_objs[i][defines.hyperparameter], commit = True,
+            max_depth = int(self.args["max_depth"]),
+            min_samples_leaf = int(self.args["min_samples_leaf"]),
+            random_state = int(self.args["random_state"]),
+            max_features = int(self.args["max_features"]),
+            criterion = self.args["criterion"],    
         )
 
 

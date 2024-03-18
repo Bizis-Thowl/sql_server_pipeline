@@ -82,11 +82,18 @@ class MLContext:
             self.iter_test_X = dict()
             self.iter_test_y = dict()
             
-            for i in range(3): 
+            num_train_iterations = 3
+            
+            loop_list = list()
+            for i in range(num_train_iterations):
+                for train_method in self.train_methods:
+                    loop_list.append(type(train_method)(self))
+            
+            
+            for i, train_method in enumerate(self.train_methods): 
                 self.iter_args[i] = dict()
-                self.iter_objs[i] = dict()    
-                self.iter_objs[i]["model"] = dict()               
-                self.start_train_iteration(i)
+                self.iter_objs[i] = dict()          
+                self.start_train_iteration(i, train_method)
                 
         except SQLAlchemyError as e:
             self.session.rollback()  # Rollback in case of error
@@ -99,9 +106,7 @@ class MLContext:
         #CreateSQLObjects create_train_iteration_objects(mlContext)
         create_train_iteration_objects(self, i)
         self.session.commit()
-        
         #CreateTrainingObjects
-        
         self.iter_train_X[i] = self.train_X
         self.iter_train_y[i] = self.train_y
         self.iter_test_X[i] = self.test_X
@@ -110,8 +115,7 @@ class MLContext:
         for train_preparation_method in self.train_preparation_methods:
             train_preparation_method.populate(i)
             
-        for train_method in self.train_methods:
-            train_method.populate(i)
+        train_method.populate(i)
         
         self.iter_args[i]["mlContext"] = self
         self.iter_args[i]["i"] = i   

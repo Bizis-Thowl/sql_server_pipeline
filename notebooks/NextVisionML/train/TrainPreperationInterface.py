@@ -7,3 +7,6 @@ class TrainPreperationInterface:
     
     def populate(self, i):
         pass
+    
+    def upload(self, i):
+        pass

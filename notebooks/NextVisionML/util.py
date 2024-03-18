@@ -22,7 +22,7 @@ def get_engine():
 
 def get_engine_trusted():
     server = 'localhost'
-    database = 'metmast_0_5'
+    database = 'metmast_0_7'
 
     # Construct the connection string with trusted connection
     connection_string = f'mssql+pyodbc://@{server}:1433/{database}?trusted_connection=yes&driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes' #TODO:Certificate
@@ -89,6 +89,7 @@ def update_object_attributes(context, entity, commit = True, **kwargs):
         entity: The SQLAlchemy entity to be updated.
         attributes: A dictionary of attribute names and their new values.
     """
+    if(type(context).__name__ == "MLContext"): context = context.context
     for attr, value in kwargs.items():
         setattr(entity, attr, value)
     #context["session"].add(entity) necessary??

@@ -35,6 +35,6 @@ class CorrelationFilter(TrainPreperationInterface):
                 feature_id = int(get_feature_id_by_name(self.mlContext.context, signal)))
         
         update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i][defines.hyperparameter], commit = True,
-                                    num_cols_dropped = self.num_cols_dropped)
+                                    mut_info_num_cols_dropped = self.num_cols_dropped)
         
         

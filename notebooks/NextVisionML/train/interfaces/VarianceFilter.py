@@ -5,11 +5,10 @@ from ...util import create_object, get_feature_id_by_name, get_next_ID_for_Table
 import numpy as np
 from ..defines import defines
 from sklearn.feature_selection import VarianceThreshold
-from MLContext import MLContext
 
 class VarianceFilter(TrainPreperationInterface):
     low_variant_signals = None
-    mlContext:MLContext = None
+    mlContext = None
     
     def __init__(self, mlContext):
         super().__init__(mlContext)

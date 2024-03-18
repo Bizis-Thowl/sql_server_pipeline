@@ -44,5 +44,5 @@ class CorrelationFilter(TrainPreperationInterface):
                 feature_id = int(get_feature_id_by_name(self.mlContext.context, signal)))
         
         update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i][defines.hyperparameter], commit = True,
-                                    correlation_filter = self.threshold)
+                                    correlation_filter_threshold = self.threshold)
         
