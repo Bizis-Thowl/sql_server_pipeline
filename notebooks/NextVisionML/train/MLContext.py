@@ -101,7 +101,7 @@ class MLContext:
         finally:
             self.session.close()  # Ensure session is closed after the operation)
             
-    def start_train_iteration(self, i):
+    def start_train_iteration(self, i, train_method):
         #This runs multiple times per Object!        
         #CreateSQLObjects create_train_iteration_objects(mlContext)
         create_train_iteration_objects(self, i)
@@ -120,14 +120,13 @@ class MLContext:
         self.iter_args[i]["mlContext"] = self
         self.iter_args[i]["i"] = i   
         
-        for train_method in self.train_methods:
-            trials = Trials()
-            tm_dic = dict()
-            tm_dic["train_method"] = train_method
-            args = {**self.iter_args[i], **tm_dic}
-            params = fmin(fn = callback, space = args, algo = tpe.suggest, max_evals = 2, trials = trials)
-            train_method.eval_predict = train_method.model.predict(self.iter_test_X[i])
-            train_method.upload(i)
+        trials = Trials()
+        tm_dic = dict()
+        tm_dic["train_method"] = train_method
+        args = {**self.iter_args[i], **tm_dic}
+        params = fmin(fn = callback, space = args, algo = tpe.suggest, max_evals = 2, trials = trials)
+        train_method.eval_predict = train_method.model.predict(self.iter_test_X[i])
+        train_method.upload(i)
 
 
 def callback(args):   
@@ -138,14 +137,17 @@ def callback(args):
     #TODO: Refactor dictionary structure to typed objects
     i = args["i"]
     mlContext = args["mlContext"]
-    train_method = args["train_method"]
+    train_method = args["train_method"]    
+    args["train_method"] = None
     
-    for train_preparation_method in args["mlContext"].train_preparation_methods:
+    for train_preparation_method in mlContext.train_preparation_methods:
         train_preparation_method.calculate(i, args)
 
     train_method.model = train_method.get_model(i, args)
     
     train_method.model.fit(mlContext.iter_train_X[i], mlContext.iter_train_y[i])
+    
+    args["mlContext"] = None
             
     train_method.score = cross_val_score(train_method.model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=2, scoring='accuracy')   
      

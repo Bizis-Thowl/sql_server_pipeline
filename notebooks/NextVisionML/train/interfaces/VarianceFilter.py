@@ -14,7 +14,7 @@ class VarianceFilter(TrainPreperationInterface):
         super().__init__(mlContext)
         
     def calculate(self, i, args):
-        #Calculate  
+        #Calculate
         variance_threshold_floor = self.mlContext.init_parameters.min_threshold_feature_variance
         variance_threshold_fac = self.mlContext.init_parameters.max_threshold_feature_variance - self.mlContext.init_parameters.min_threshold_feature_variance/100
         temp = variance_threshold_fac * args["variance_threshold_var_fac"]

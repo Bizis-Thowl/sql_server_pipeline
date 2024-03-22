@@ -1,3 +1,4 @@
+import pickle
 import pandas as pd
 
 from hyperopt import hp
@@ -6,6 +7,7 @@ from ....util import update_object_attributes, create_object, get_next_ID_for_Ta
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.tree import DecisionTreeClassifier
 from ...defines import defines
+import os
 
 class DecisionTreeClfr(TrainInterface):
     class class_defines:
@@ -59,8 +61,12 @@ class DecisionTreeClfr(TrainInterface):
             random_state = int(self.args["random_state"]),
             max_features = int(self.args["max_features"]),
             criterion = self.args["criterion"],    
-        )
-
-
+        )  
         
-    
+    def save_model(self, i):
+        model_id = str(self.mlContext.iter_objs[i][defines.model].id)
+        file_name = self.mlContext.iter_objs[i][defines.model].algorithm
+        base_path = os.getenv("model_path")
+        dtr_path = base_path + model_id + file_name
+        with open(dtr_path, 'wb') as f:
+            pickle.dump(self.model, f)

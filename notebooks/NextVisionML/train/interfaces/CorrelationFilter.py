@@ -18,20 +18,19 @@ class CorrelationFilter(TrainPreperationInterface):
         #get vars
         self.threshold = args[CorrelationFilter.class_defines.correlation_filter_threshold]
         #calculate
-        highly_correlated_features = set()
+        highly_correlated_features = list()
         correlation_matrix = self.mlContext.iter_train_X[i].corr()
-        for i in range(len(correlation_matrix.columns)):
-            for j in range(i + 1):
-                if abs(correlation_matrix.iloc[i, j]) > self.threshold:
-                    colname = correlation_matrix.columns[i]
-                    highly_correlated_features.update(colname)
+        for k in range(len(correlation_matrix.columns)):
+            for j in range(k + 1):
+                if abs(correlation_matrix.iloc[k, j]) > self.threshold:
+                    colname = correlation_matrix.columns[k]
+                    highly_correlated_features.append(colname)
                     
-                    
+        highly_correlated_features = list(set(highly_correlated_features))           
         self.mlContext.iter_train_X[i].drop(columns = highly_correlated_features)
         self.mlContext.iter_test_X[i].drop(columns = highly_correlated_features)
         
-        self.dropped_signals = highly_correlated_features
-        
+        self.dropped_signals = highly_correlated_features    
         
     def populate(self, i):
         self.mlContext.iter_args[i][CorrelationFilter.class_defines.correlation_filter_threshold] = 0.01 *  hp.randint(CorrelationFilter.class_defines.correlation_filter_threshold, 15)

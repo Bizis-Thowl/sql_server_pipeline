@@ -7,6 +7,9 @@ class TrainInterface:
     def __init__(self, mlContext:MLContext):
         self.mlContext = mlContext
         
+    def save_model(self, i):
+        pass
+        
     def get_model(self, i, args): # Derive Hyperopt args from method not from context.iter_args[i]!!!!!
         pass
     
@@ -17,7 +20,7 @@ class TrainInterface:
         for train_preparation in self.mlContext.train_preparation_methods:
             train_preparation.upload(i)
         
-        update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i][defines.model], commit = True,
+        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i][defines.model], commit = True,
             algorithm  = "model_" + type(self).__name__ + "_" + str(i) + ".model")
         
         df = pd.DataFrame()
@@ -25,3 +28,4 @@ class TrainInterface:
         df["datapoint_id"] = self.mlContext.test_db_indexes
         df["model_id"] = self.mlContext.iter_objs[i]["model"].id
         df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
+        self.save_model( i)
