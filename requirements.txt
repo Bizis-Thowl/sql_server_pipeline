@@ -7,3 +7,4 @@ pyodbc
 python-dotenv
 scikit-learn
 sqlalchemy
+jupyter
