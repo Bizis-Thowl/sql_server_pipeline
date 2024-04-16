@@ -6,7 +6,6 @@ from ....util import update_object_attributes, create_objects
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import balanced_accuracy_score
 import numpy as np
-from skorch import NeuralNetClassifier
 from sklearn.base import BaseEstimator, TransformerMixin
 from ...defines import defines
 import pickle
@@ -47,6 +46,8 @@ class OneHotClfr(TrainInterface):
         net_path = base_path + model_id + file_name
         with open(net_path, 'wb') as f:
             pickle.dump(self.model, f)
+        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i]["model"], with_commit=True,
+            path_to_model = net_path)
                  
 class SimpleNetSoftmax(torch.nn.Module):
     def __init__(self, input_size, output_size, layer_count):
@@ -120,7 +121,7 @@ class OneHotClfrCustom(BaseEstimator, TransformerMixin):
         
         pred = self.net(normalized_X)
         _, pred = torch.max(pred, 1)
-        pred = self.le.inverse_transform(pred)
+        pred = self.le.inverse_transform(pred.ravel())
         return pred
 
     def __getstate__(self):

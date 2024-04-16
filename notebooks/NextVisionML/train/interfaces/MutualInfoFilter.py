@@ -10,6 +10,7 @@ from ...util import update_object_attributes
 class MutualInfoFilter(TrainPreperationInterface):
     class class_defines:
         mutual_info_num_cols_dropped = "mutual_info_num_cols_dropped"
+        max_features = 10
     
     def __init__(self, mlContext):
         super().__init__(mlContext)
@@ -20,10 +21,9 @@ class MutualInfoFilter(TrainPreperationInterface):
         mutual_info = mutual_info_classif(self.mlContext.iter_train_X[i], self.mlContext.iter_train_y[i])
         order = np.argsort(mutual_info)
         sorted_cols = np.array(self.mlContext.iter_train_X[i].columns)[order[::-1]]
-        self.dropped_cols = sorted_cols[0:self.num_cols_dropped]
-        self.mlContext.iter_train_X[i].drop(columns = sorted_cols)
-        self.mlContext.iter_test_X[i].drop(columns = sorted_cols)
-                
+        self.dropped_cols = sorted_cols[0:len(sorted_cols) - self.class_defines.max_features] #self.num_cols_dropped]
+        self.mlContext.iter_train_X[i] = self.mlContext.iter_train_X[i].drop(columns = self.dropped_cols)
+        self.mlContext.iter_test_X[i] = self.mlContext.iter_test_X[i].drop(columns = self.dropped_cols)
                        
     def populate(self, i):
         self.mlContext.iter_args[i][self.class_defines.mutual_info_num_cols_dropped] = hp.randint(self.class_defines.mutual_info_num_cols_dropped, 100)

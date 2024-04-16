@@ -1,6 +1,5 @@
 import pickle
 import pandas as pd
-
 from hyperopt import hp
 from ...TrainInterface import TrainInterface
 from ....util import update_object_attributes, create_object, get_next_ID_for_Table
@@ -70,3 +69,5 @@ class DecisionTreeClfr(TrainInterface):
         dtr_path = base_path + model_id + file_name
         with open(dtr_path, 'wb') as f:
             pickle.dump(self.model, f)
+        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i]["model"], with_commit=True,
+            path_to_model = dtr_path)

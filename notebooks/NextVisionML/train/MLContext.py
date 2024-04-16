@@ -124,8 +124,9 @@ class MLContext:
         tm_dic = dict()
         tm_dic["train_method"] = train_method
         args = {**self.iter_args[i], **tm_dic}
-        params = fmin(fn = callback, space = args, algo = tpe.suggest, max_evals = 2, trials = trials)
+        params = fmin(fn = callback, space = args, algo = tpe.suggest, max_evals = 20, trials = trials)
         train_method.eval_predict = train_method.model.predict(self.iter_test_X[i])
+        train_method.balanced_accuracy_score = balanced_accuracy_score(self.iter_test_y[i], train_method.eval_predict)
         train_method.upload(i)
 
 

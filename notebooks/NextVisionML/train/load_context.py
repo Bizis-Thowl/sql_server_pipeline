@@ -24,7 +24,48 @@ def load_context():
     sqlContext = dict()
     sqlContext["metadata"] = metadata
     sqlContext["Base"] = Base
-    sqlContext["engine"] = engine    
+    sqlContext["engine"] = engine  
+    con = engine.connect()    
+    
+    datapoint = pd.read_sql_table("datapoint", con)
+    #labels = pd.read_sql_table("label", con)
+    #label_values = pd.read_sql_table("label_categorical", con)
+    datapoint_label_values = pd.read_sql_table("datapoint_class_label", con)
+    features = pd.read_sql_table("feature", con)
+    datapoint_features = pd.read_sql_table("datapoint_feature_value", con)
+    datapoint = datapoint.rename(columns={'id': "datapoint_id"})
+
+    for i, row in features.iterrows():
+        feature_id = row["id"]
+        feature_df = datapoint_features[datapoint_features["feature_id"]==feature_id]
+        feature_df = feature_df.drop(columns={"id", "feature_id"})
+        datapoint = pd.merge(datapoint, feature_df, on='datapoint_id')
+        datapoint.rename(columns={'value': row["name"]}, inplace=True)
+        if "datapoint_id" in datapoint.columns:
+            pass
+            #datapoint = datapoint.drop(columns={"datapoint_id"})
+        if "id_x" in datapoint.columns:
+            datapoint = datapoint.drop(columns={"id_x"})
+        if "id_y" in datapoint.columns:
+            datapoint = datapoint.drop(columns={"id_y"})
+
+    datapoint = pd.merge(datapoint, datapoint_label_values, on='datapoint_id')
+    datapoint = datapoint.rename(columns={'label_categorical_id': "Risk Level"})
+
+    datapoint[datapoint["Risk Level"] == 1] == "low"
+    datapoint[datapoint["Risk Level"] == 2] == "low-med"
+    datapoint[datapoint["Risk Level"] == 3] == "medium"
+    datapoint[datapoint["Risk Level"] == 4] == "med-high"
+    datapoint[datapoint["Risk Level"] == 5] == "high"
+
+    train = datapoint[datapoint["datapoint_mappings_id"]==1]
+    test = datapoint[datapoint["datapoint_mappings_id"]==2]
+
+    train = train.drop(columns={"datapoint_mappings_id", "datetime", "id"})
+    test = test.drop(columns={"datapoint_mappings_id", "datetime", "id"})
+    return sqlContext, train, test
+    
+      
     
     #Metadata
     datapoint = metadata.tables['datapoint']

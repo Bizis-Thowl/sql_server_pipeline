@@ -15,8 +15,8 @@ class VarianceFilter(TrainPreperationInterface):
         
     def calculate(self, i, args):
         #Calculate
-        variance_threshold_floor = self.mlContext.init_parameters.min_threshold_feature_variance
-        variance_threshold_fac = self.mlContext.init_parameters.max_threshold_feature_variance - self.mlContext.init_parameters.min_threshold_feature_variance/100
+        variance_threshold_floor = self.min_threshold_feature_variance
+        variance_threshold_fac = self.max_threshold_feature_variance - self.min_threshold_feature_variance/100
         temp = variance_threshold_fac * args["variance_threshold_var_fac"]
         self.threshold =variance_threshold_floor + temp
               
@@ -34,7 +34,9 @@ class VarianceFilter(TrainPreperationInterface):
         
         self.low_variant_signals = low_variant_signals
     def populate(self, i):
-        self.mlContext.iter_args[i]["variance_threshold_var_fac"] = hp.randint("variance_threshold", 100)
+        self.mlContext.iter_args[i]["variance_threshold_var_fac"] = hp.randint("variance_threshold", 100)        
+        self.min_threshold_feature_variance = self.mlContext.init_parameters.min_threshold_feature_variance
+        self.max_threshold_feature_variance = self.mlContext.init_parameters.max_threshold_feature_variance
         
         
     def upload(self, i):
