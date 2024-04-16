@@ -17,16 +17,16 @@ def get_engine():
     PASSWORD = os.getenv("DB_PW")
     DRIVER = os.getenv("DB_DRIVER")
     engine = create_engine(
-        f"mssql+pyodbc://{USER}:{PASSWORD}@{SERVER}:{PORT}/{DATABASE}?driver={DRIVER}&TrustServerCertificate=yes")
+        f"mssql+pyodbc://{USER}:{PASSWORD}@{SERVER}:{PORT}/{DATABASE}?driver={DRIVER}&TrustServerCertificate=yes", pool_size=10000, max_overflow=-1)
     return engine
 
 def get_engine_trusted():
     server = 'localhost'
-    database = 'metmast_0_4'
+    database = 'metmast_0_7'
 
     # Construct the connection string with trusted connection
     connection_string = f'mssql+pyodbc://@{server}:1433/{database}?trusted_connection=yes&driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes' #TODO:Certificate
-    engine = create_engine(connection_string)
+    engine = create_engine(connection_string, pool_size=1000, max_overflow=-1)
     return engine
 
 def create_object(context, table_name, with_commit=False, **kwargs):
@@ -73,7 +73,7 @@ def get_feature_id_by_name(context, feature_name):
     engine = session.get_bind()
     base = context["Base"]
     query = session.query(base.classes.feature)
-    df = pd.read_sql_query(query.statement, engine)
+    df = pd.read_sql_query(query.statement, engine.connect())
     feature_id = df[df["name"] == feature_name].iloc[0]["id"]
     return feature_id
 
@@ -81,7 +81,7 @@ def get_next_ID_for_Table(sqlContext:dict, name:str):
     table = sqlContext["Base"].classes[name]
     return sqlContext["session"].query(table.id).count() + 1 
         
-def update_object_attributes(context, entity, **kwargs):
+def update_object_attributes(context, entity, commit = True, **kwargs):
     """
     Update the attributes of a given SQLAlchemy entity.
 
@@ -89,8 +89,9 @@ def update_object_attributes(context, entity, **kwargs):
         entity: The SQLAlchemy entity to be updated.
         attributes: A dictionary of attribute names and their new values.
     """
+    if(type(context).__name__ == "MLContext"): context = context.context
     for attr, value in kwargs.items():
         setattr(entity, attr, value)
     #context["session"].add(entity) necessary??
-    context["session"].commit()
+    if(commit): context["session"].commit()
     return entity

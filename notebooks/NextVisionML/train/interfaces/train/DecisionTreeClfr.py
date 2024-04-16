@@ -1,53 +1,42 @@
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+import pickle
 import pandas as pd
+from hyperopt import hp
 from ...TrainInterface import TrainInterface
-from ....util import update_object_attributes
+from ....util import update_object_attributes, create_object, get_next_ID_for_Table
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.tree import DecisionTreeClassifier
-from .temp_util import get_trust_scores
+from ...defines import defines
+import os
 
 class DecisionTreeClfr(TrainInterface):
+    class class_defines:
+        max_depth = "max_depth"
+        min_samples_leaf  = "min_samples_leaf"
+        random_state = "random_state"
+        max_features = "max_features"
+        criterion = "criterion"
+        
     def __init__(self, mlContext):
         super().__init__(mlContext)
         
-    def calculate(self, i, args):
-        update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["hyperparameter"], 
-                    max_depth = int(args["max_depth"]),
-                    min_samples_leaf = int(args["min_samples_leaf"]),
-                    random_state = int(args["random_state"]),
-                    max_features = int(args["max_features"]),
-                    criterion = args["criterion"],    
-        ) 
+    def get_model(self, i, args):
+        extracted_dict = {
+            "max_depth": args["max_depth"],
+            "min_samples_leaf": args["min_samples_leaf"],
+            "random_state": args["random_state"],
+            "max_features": args["max_features"],
+            "criterion": args["criterion"]
+        }
+        self.args = extracted_dict
         dtc = DecisionTreeClassifier(
-            max_depth = args["max_depth"],
-            min_samples_leaf = args["min_samples_leaf"],
-            random_state = args["random_state"],
-            max_features = args["max_features"],
+            max_depth = extracted_dict["max_depth"],
+            min_samples_leaf = extracted_dict["min_samples_leaf"],
+            random_state = extracted_dict["random_state"],
+            max_features = extracted_dict["max_features"],
             criterion = args["criterion"],
-        )
-        dtc.fit(self.mlContext.iter_train_X[i], self.mlContext.iter_train_y[i])
-        #self.mlContext.iter_objs[i]["model"]["dtc"] = dtc
-        eval_predict = dtc.predict(self.mlContext.iter_test_X[i]) 
-        balanced_accuracy = balanced_accuracy_score(self.mlContext.iter_test_y[i], eval_predict) 
-        
-        self.mlContext.iter_objs[i]["dtc_pred"] = eval_predict
-        self.mlContext.iter_objs[i]["dtc_balanced_accuracy"] = balanced_accuracy
-        
-        test_pred = pd.DataFrame(eval_predict.reshape(-1, 1))  
-        class_mapping = {"low": 0, "low-med": 1, "medium": 2, "med-high": 3, "high": 4}
-        train_y_ = self.mlContext.iter_train_y[i]["Risk Level"].map(class_mapping)
-        test_pred = test_pred[0].map(class_mapping)
-        self.mlContext.iter_objs[i]["dtc_trust_scores"] = get_trust_scores(self.mlContext.iter_train_X[i].values, train_y_, self.mlContext.iter_test_X[i].values, test_pred)
-        
-        self.mlContext.iter_objs[i]["hyperparameter"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["hyperparameter"], 
-            max_depth = int(args["max_depth"]),
-            min_samples_leaf = int(args["min_samples_leaf"]),
-            random_state = int(args["random_state"]),
-            max_features = int(args["max_features"]),
-            criterion = args["criterion"],    
-        ) 
-        
-        return balanced_accuracy        
+        )        
+        return dtc             
+    
         
     def populate(self, i):
         args = {
@@ -58,18 +47,27 @@ class DecisionTreeClfr(TrainInterface):
             "criterion": hp.choice('criterion', ["gini", "entropy"]),
         }  
         self.mlContext.iter_args[i].update(args) 
-        self.mlContext.iter_objs[i]["model"]["dtc"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model"]["dtc"],
-                                                                        path_to_model = "dtc")
+        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i]["model"], with_commit=True,
+            algorithm = defines.decision_tree_classifier)
+        
+        
     def upload(self, i):
-        self.mlContext.iter_objs[i]["model_score_dtc"] = update_object_attributes(self.mlContext.context, self.mlContext.iter_objs[i]["model_score_dtc"],
-            balanced_accuracy_score = self.mlContext.iter_objs[i]["dtc_balanced_accuracy"])
+        TrainInterface.upload(self, i)
         
-        df = pd.DataFrame()        
-        df["pred"] = self.mlContext.iter_objs[i]["dtc_pred"]
-        df["trust_score"] = self.mlContext.iter_objs[i]["dtc_trust_scores"]
-        df["datapoint_id"] = self.mlContext.test_db_indexes
-        df["model_id"] = self.mlContext.iter_objs[i]["model"]["dtc"].id
-        df.to_sql("prediciions_categorical", con = self.mlContext.engine, index = False, if_exists='append')
-
+        self.mlContext.iter_objs[i][defines.hyperparameter] = update_object_attributes(context = self.mlContext.context, entity = self.mlContext.iter_objs[i][defines.hyperparameter], commit = True,
+            max_depth = int(self.args["max_depth"]),
+            min_samples_leaf = int(self.args["min_samples_leaf"]),
+            random_state = int(self.args["random_state"]),
+            max_features = int(self.args["max_features"]),
+            criterion = self.args["criterion"],    
+        )  
         
-    
+    def save_model(self, i):
+        model_id = str(self.mlContext.iter_objs[i][defines.model].id)
+        file_name = self.mlContext.iter_objs[i][defines.model].algorithm
+        base_path = os.getenv("model_path")
+        dtr_path = base_path + model_id + file_name
+        with open(dtr_path, 'wb') as f:
+            pickle.dump(self.model, f)
+        self.mlContext.iter_objs[i][defines.model] = update_object_attributes(context = self.mlContext, entity = self.mlContext.iter_objs[i]["model"], with_commit=True,
+            path_to_model = dtr_path)

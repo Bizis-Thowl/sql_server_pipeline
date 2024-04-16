@@ -7,10 +7,13 @@ from .MLContext_sql_utils import create_train_iteration_objects, load_init_param
 from .train_utils import sample_snapshot
 from .MLContext_utils import split_X_y_z
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from .TrainInterationInterface import TrainPreperationInterface
+from .TrainPreperationInterface import TrainPreperationInterface
 from.interfaces.VarianceFilter import VarianceFilter
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import balanced_accuracy_score
+from sklearn.model_selection import cross_val_score
+import numpy as np
+from .defines import defines
 
 class MLContext:
     def __init__(self):
@@ -22,7 +25,7 @@ class MLContext:
         self.session = Session(bind=self.engine)
         sqlContext["session"] = self.session
         self.context = sqlContext
-        self.hooks = list()
+        self.train_preparation_methods = list()
         self.train_methods = list()
         self.xai_hooks = list()
         self.train_X, self.train_y, self.train_db_indexes = split_X_y_z(self.train)
@@ -69,7 +72,7 @@ class MLContext:
             for i, index in enumerate(used_indexes):            
                 train_process_train_data_junction = create_object(self.context, "datapoint_train_process_junction",
                                                                 train_process_id = self.train_process.id,
-                                                                train_data_id = index + 1) 
+                                                                train_data_id = index + 1)
                 self.session.commit()
             
             self.iter_args = dict()
@@ -79,11 +82,18 @@ class MLContext:
             self.iter_test_X = dict()
             self.iter_test_y = dict()
             
-            for i in range(3): 
+            num_train_iterations = 3
+            
+            loop_list = list()
+            for i in range(num_train_iterations):
+                for train_method in self.train_methods:
+                    loop_list.append(type(train_method)(self))
+            
+            
+            for i, train_method in enumerate(self.train_methods): 
                 self.iter_args[i] = dict()
-                self.iter_objs[i] = dict()    
-                self.iter_objs[i]["model"] = dict()               
-                self.start_train_iteration(i)
+                self.iter_objs[i] = dict()          
+                self.start_train_iteration(i, train_method)
                 
         except SQLAlchemyError as e:
             self.session.rollback()  # Rollback in case of error
@@ -91,47 +101,56 @@ class MLContext:
         finally:
             self.session.close()  # Ensure session is closed after the operation)
             
-    def start_train_iteration(self, i):
+    def start_train_iteration(self, i, train_method):
         #This runs multiple times per Object!        
         #CreateSQLObjects create_train_iteration_objects(mlContext)
         create_train_iteration_objects(self, i)
         self.session.commit()
-        
         #CreateTrainingObjects
-        
         self.iter_train_X[i] = self.train_X
         self.iter_train_y[i] = self.train_y
         self.iter_test_X[i] = self.test_X
         self.iter_test_y[i] = self.test_y                 
         
-        for hook in self.hooks:
-            hook.populate(i)
-        for train_method in self.train_methods:
-            train_method.populate(i)
+        for train_preparation_method in self.train_preparation_methods:
+            train_preparation_method.populate(i)
+            
+        train_method.populate(i)
         
         self.iter_args[i]["mlContext"] = self
         self.iter_args[i]["i"] = i   
         
-        for train_method in self.train_methods:
-            trials = Trials()
-            tm_dic = dict()
-            tm_dic["train_method"] = train_method
-            args = {**self.iter_args[i], **tm_dic}
-            params = fmin(callback, args, algo = tpe.suggest, max_evals = 10, trials = trials)
-            train_method.upload(i)
-        
-        
+        trials = Trials()
+        tm_dic = dict()
+        tm_dic["train_method"] = train_method
+        args = {**self.iter_args[i], **tm_dic}
+        params = fmin(fn = callback, space = args, algo = tpe.suggest, max_evals = 20, trials = trials)
+        train_method.eval_predict = train_method.model.predict(self.iter_test_X[i])
+        train_method.balanced_accuracy_score = balanced_accuracy_score(self.iter_test_y[i], train_method.eval_predict)
+        train_method.upload(i)
+
 
 def callback(args):   
+    # Define the objective functiondef objective(params):
+    # Hyperopt aims to minimize the objective, so negate accuracyreturn {'loss': -mean_score, 'status': STATUS_OK}
     #IMPORTANT: iterargs != args; args contains the selected parameters by hyperopt iterargs contains the definitions; use args for referening these otherwise iterargs;
+    
     #TODO: Refactor dictionary structure to typed objects
     i = args["i"]
     mlContext = args["mlContext"]
-    train_method = args["train_method"]
+    train_method = args["train_method"]    
+    args["train_method"] = None
     
+    for train_preparation_method in mlContext.train_preparation_methods:
+        train_preparation_method.calculate(i, args)
+
+    train_method.model = train_method.get_model(i, args)
     
-    for hook in args["mlContext"].hooks:
-        hook.calculate(i, args)
-        
-    acc = 1 - train_method.calculate(i, args)
+    train_method.model.fit(mlContext.iter_train_X[i], mlContext.iter_train_y[i])
+    
+    args["mlContext"] = None
+            
+    train_method.score = cross_val_score(train_method.model, mlContext.iter_train_X[i], mlContext.iter_train_y[i], cv=2, scoring='accuracy')   
+     
+    acc = 1 - np.mean(train_method.score)
     return {'loss': acc, 'status': STATUS_OK}
