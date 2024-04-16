@@ -6,7 +6,7 @@ pandas
 pyodbc
 python-dotenv
 scikit-learn
-sqlalchemy=2.0.15
+sqlalchemy==2.0.15
 torch
 scorch
 notebook
