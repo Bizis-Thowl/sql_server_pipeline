@@ -21,7 +21,7 @@ class MutualInfoFilter(TrainPreperationInterface):
         mutual_info = mutual_info_classif(self.mlContext.iter_train_X[i], self.mlContext.iter_train_y[i])
         order = np.argsort(mutual_info)
         sorted_cols = np.array(self.mlContext.iter_train_X[i].columns)[order[::-1]]
-        self.dropped_cols = sorted_cols[0:len(sorted_cols) - self.class_defines.max_features] #self.num_cols_dropped]
+        self.dropped_cols = sorted_cols[self.class_defines.max_features:len(sorted_cols)]
         self.mlContext.iter_train_X[i] = self.mlContext.iter_train_X[i].drop(columns = self.dropped_cols)
         self.mlContext.iter_test_X[i] = self.mlContext.iter_test_X[i].drop(columns = self.dropped_cols)
                        
